@@ -60,35 +60,44 @@ device_app:
 - **All endpoints** – `app-measurement.com`, `region1.app-measurement.com`, `app-analytics-services.com`, `app-analytics-services-att.com` (iOS with ATT)
 - **No dependencies** – a single Python file, works with the official mitmproxy installers
 
-## Requirements
-
-[mitmproxy](https://www.mitmproxy.org/) **12 or newer** (`brew install --cask mitmproxy` on macOS, or download from mitmproxy.org).
-
 ## Installation
 
-### macOS / Linux – one command
+### macOS
+
+**1. Install mitmproxy** (version 12 or newer) using [Homebrew](https://brew.sh):
+
+```bash
+brew install --cask mitmproxy
+```
+
+No Homebrew? Download the installer from [mitmproxy.org/downloads](https://mitmproxy.org/downloads/).
+
+**2. Install the addon:**
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/michalnovacek96/mitmproxy/main/install.sh | bash
 ```
 
-This downloads the addon to `~/.mitmproxy/addons/` and registers it in `~/.mitmproxy/config.yaml`, so it loads every time you start `mitmweb`, `mitmproxy` or `mitmdump`.
+This downloads the addon to `~/.mitmproxy/addons/` and registers it in `~/.mitmproxy/config.yaml`, so it loads every time you start `mitmweb`. To update later, run the same command again.
 
-To update later, just run the same command again.
+### Windows
 
-### Manually (any OS)
+**1. Install mitmproxy** (version 12 or newer) – download and run the Windows installer from [mitmproxy.org/downloads](https://mitmproxy.org/downloads/).
 
-Run mitmproxy with the script:
+**2. Install the addon:**
 
-```bash
-mitmweb -s ga4_app_measurement.py
-```
+1. Download [`ga4_app_measurement.py`](https://raw.githubusercontent.com/michalnovacek96/mitmproxy/main/ga4_app_measurement.py) (right click → Save as).
+2. Create the file `%USERPROFILE%\.mitmproxy\config.yaml` with this content (use the path where you saved the file):
 
-Or add it permanently to `~/.mitmproxy/config.yaml` (on Windows `%USERPROFILE%\.mitmproxy\config.yaml`):
+   ```yaml
+   scripts:
+     - C:\Users\<you>\Downloads\ga4_app_measurement.py
+   ```
 
-```yaml
-scripts:
-  - /full/path/to/ga4_app_measurement.py
+Alternatively, skip the config and start mitmweb with the script each time:
+
+```powershell
+mitmweb -s C:\Users\<you>\Downloads\ga4_app_measurement.py
 ```
 
 ## Usage
