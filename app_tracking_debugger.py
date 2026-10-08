@@ -1082,8 +1082,7 @@ table.hits { width: 100%; border-collapse: collapse; table-layout: fixed; }
 .hits tr.sel td { background: var(--sel); }
 .t { width: 112px; color: var(--muted); font-family: var(--mono); font-size: 12px; }
 .tool { width: 128px; }
-.ev { font-weight: 600; }
-.url { width: 38%; color: var(--muted); font-family: var(--mono); font-size: 12px; }
+.url { color: var(--muted); font-family: var(--mono); font-size: 12px; }
 .hits thead th { position: sticky; top: 0; z-index: 1; background: var(--panel); text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
 
 .st { width: 64px; text-align: left; font-family: var(--mono); font-size: 12px; color: var(--muted); }
@@ -1202,10 +1201,9 @@ function renderList() {
       <td class="t">${fmtTime(h.time)}</td>
       <td class="tool"><span class="badge" style="--c:${t.color}">${esc(t.label)}</span></td>
       <td class="url" title="${esc(h.url)}">${esc(endpoint(h.url))}</td>
-      <td class="st ${bad ? "bad" : ""}">${esc(h.status ?? "")}</td>
-      <td class="ev" title="${esc(h.event)}">${esc(h.event)}</td></tr>`);
+      <td class="st ${bad ? "bad" : ""}">${esc(h.status ?? "")}</td></tr>`);
   }
-  const head = `<thead><tr><th class="t">Time</th><th class="tool">Tool</th><th class="url">URL</th><th class="st">Status</th><th class="ev">Event</th></tr></thead>`;
+  const head = `<thead><tr><th class="t">Time</th><th class="tool">Tool</th><th class="url">URL</th><th class="st">Status</th></tr></thead>`;
   $("list").innerHTML = rows.length ? `<table class="hits">${head}<tbody>${rows.join("")}</tbody></table>`
     : `<div class="empty">${S.hits.length ? "No hits match the filter." : "No hits yet. Use the app with the proxy enabled."}</div>`;
   $("count").textContent = `${n} hit${n === 1 ? "" : "s"}`;
