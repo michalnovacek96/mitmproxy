@@ -28,6 +28,7 @@ import re
 import struct
 import threading
 import urllib.parse
+import webbrowser
 import zlib
 from collections import deque
 from datetime import datetime, timezone
@@ -921,6 +922,7 @@ class AppTrackingDebugger:
 
     def load(self, loader):
         loader.add_option("tracking_ui_port", int, 8082, "Port of the App Tracking Debugger UI (0 = off).")
+        loader.add_option("tracking_ui_open", bool, True, "Open the App Tracking Debugger UI in the browser when mitmweb starts.")
         _load_domains()
 
     def running(self):
@@ -937,6 +939,10 @@ class AppTrackingDebugger:
         self.server.daemon_threads = True
         threading.Thread(target=self.server.serve_forever, daemon=True).start()
         logger.warning(f"App Tracking Debugger UI: http://127.0.0.1:{port}")
+        # open the UI together with mitmweb - once per process, not on every script reload
+        if web_port and ctx.options.tracking_ui_open and not os.environ.get("ATD_UI_OPENED"):
+            os.environ["ATD_UI_OPENED"] = "1"
+            webbrowser.open(f"http://127.0.0.1:{port}")
 
     def done(self):
         if self.server:
