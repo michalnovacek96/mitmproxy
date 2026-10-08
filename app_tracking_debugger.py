@@ -113,6 +113,15 @@ BUNDLE = {
 
 BATCH = {1: ("bundle", "msg", BUNDLE)}
 
+# app-analytics-services.com/skan - SKAdNetwork request sent by the Firebase SDK
+SKAN_REQUEST = {
+    1: ("sdk_version", "int"),
+    2: ("app_id", "str"),
+    3: ("app_instance_id", "str"),
+    4: ("skan_version", "str"),
+    6: ("timestamp", "ts"),
+}
+
 # Short names used by the Firebase SDK
 EVENT_NAMES = {
     "_s": "session_start",
@@ -511,6 +520,7 @@ def render_batch(batch: dict) -> str:
 # key, label, color, host suffixes, path regex (None = any path)
 TOOLS = [
     ("ga4", "GA4 (Firebase)", "#e8710a", HOST_SUFFIXES, r"^/a/?$"),
+    ("skan", "Firebase SKAN", "#5e35b1", HOST_SUFFIXES, r"^/skan"),
     ("ga4web", "GA4 (web)", "#f9ab00", ("google-analytics.com", "analytics.google.com"), r"/g/collect"),
     ("firebase", "Firebase", "#ffa000", (
         "firebaseinstallations.googleapis.com", "firebaseremoteconfig.googleapis.com",
@@ -737,7 +747,10 @@ def extract_hits(flow: http.HTTPFlow) -> list[dict]:
 
     raw = req.get_content(strict=False) or b""
     try:
-        if tool == "ga4" or (tool == "sgtm" and _looks_like_ga4_batch(raw)):
+        if tool == "skan":
+            extra = {"response": decode_skan_response(flow.response)} if flow.response else {}
+            events = [("skan", decode(unpack_body(raw), SKAN_REQUEST), extra, None)]
+        elif tool == "ga4" or (tool == "sgtm" and _looks_like_ga4_batch(raw)):
             events = _extract_ga4_app(raw)
         else:
             body = parse_body(req)
@@ -766,6 +779,17 @@ def extract_hits(flow: http.HTTPFlow) -> list[dict]:
         }
         for name, params, extra, ts in (events or [(_last_segment(path), {}, {}, None)])
     ]
+
+
+def decode_skan_response(resp) -> dict:
+    data = unpack_body(resp.get_content(strict=False) or b"")
+    if not data:
+        return {}
+    try:
+        return decode(data, {})
+    except DecodeError:
+        txt = _as_text(data)
+        return {"body": txt[:MAX_TEXT] if txt is not None else f"<binary {len(data)} bytes>"}
 
 
 def _jsonable(obj):
@@ -916,6 +940,25 @@ class GA4AppMeasurement(contentviews.Contentview):
 contentviews.add(GA4AppMeasurement)
 
 
+class FirebaseSKAN(contentviews.Contentview):
+    name = "Firebase SKAN"
+    syntax_highlight = "yaml"
+
+    def prettify(self, data: bytes, metadata: contentviews.Metadata) -> str:
+        is_request = isinstance(metadata.http_message, http.Request)
+        msg = decode(unpack_body(data), SKAN_REQUEST if is_request else {})
+        return "\n".join(_render(_jsonable(msg))) + "\n"
+
+    def render_priority(self, data: bytes, metadata: contentviews.Metadata) -> float:
+        flow = metadata.flow
+        if not data or flow is None or not isinstance(flow, http.HTTPFlow):
+            return 0
+        return 10 if detect_tool(flow.request.pretty_host, flow.request.path) == "skan" else 0
+
+
+contentviews.add(FirebaseSKAN)
+
+
 class AppTrackingDebugger:
     def __init__(self):
         self.server: ThreadingHTTPServer | None = None
@@ -1017,7 +1060,8 @@ button, input { font: inherit; color: inherit; }
 button { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 5px 10px; cursor: pointer; }
 button:hover { background: var(--hover); }
 input[type=search], input[type=text] { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; min-width: 0; }
-#search { width: 260px; max-width: 100%; }
+#search { width: 260px; max-width: 100%; font-family: var(--mono); font-size: 12px; }
+#search.bad { border-color: var(--err); }
 .bar { display: flex; gap: 6px; flex-wrap: wrap; padding: 10px 16px; background: var(--panel); border-bottom: 1px solid var(--line); align-items: center; }
 .chip { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px 3px 8px; cursor: pointer; user-select: none; background: var(--panel); }
 .chip .sw { width: 10px; height: 10px; border-radius: 50%; }
@@ -1038,11 +1082,10 @@ table.hits { width: 100%; border-collapse: collapse; table-layout: fixed; }
 .hits tr.sel td { background: var(--sel); }
 .t { width: 112px; color: var(--muted); font-family: var(--mono); font-size: 12px; }
 .tool { width: 128px; }
-.ev { width: 22%; font-weight: 600; }
-.url { width: 24%; color: var(--muted); font-family: var(--mono); font-size: 12px; }
+.ev { font-weight: 600; }
+.url { width: 38%; color: var(--muted); font-family: var(--mono); font-size: 12px; }
 .hits thead th { position: sticky; top: 0; z-index: 1; background: var(--panel); text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
 
-.pv { color: var(--muted); font-family: var(--mono); font-size: 12px; }
 .st { width: 64px; text-align: left; font-family: var(--mono); font-size: 12px; color: var(--muted); }
 .st.bad { color: var(--err); }
 .badge { display: inline-block; padding: 1px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; color: #fff; background: var(--c); max-width: 100%; overflow: hidden; text-overflow: ellipsis; vertical-align: middle; }
@@ -1060,8 +1103,7 @@ table.kv { width: 100%; border-collapse: collapse; font-family: var(--mono); fon
 @media (max-width: 800px) {
   main { flex-direction: column; }
   #detail { border-left: 0; border-top: 1px solid var(--line); flex-basis: 50%; }
-  .pv, .url { display: none; }
-  .ev { width: auto; }
+  .url { display: none; }
   .tool { width: 104px; }
 }
 </style>
@@ -1072,7 +1114,7 @@ table.kv { width: 100%; border-collapse: collapse; font-family: var(--mono); fon
     <a href="https://www.measure-apps.com" target="_blank" rel="noopener" aria-label="measure-apps.com"><svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="6" y="2" width="20" height="28" rx="3" stroke="#1a1a1a" stroke-width="2" fill="#ffffff"/><rect x="8" y="6" width="16" height="17" fill="#298F89" fill-opacity="0.2"/><rect x="10" y="16" width="3" height="7" fill="#298F89"/><rect x="14.5" y="12" width="3" height="11" fill="#298F89"/><rect x="19" y="8" width="3" height="15" fill="#1a1a1a"/><circle cx="16" cy="26" r="1.5" fill="#1a1a1a"/></svg></a>
     <h1>App Tracking Debugger <span class="dot" title="Live"></span><span class="by">by <a href="https://www.measure-apps.com" target="_blank" rel="noopener">measure-apps.com</a></span></h1>
   </div>
-  <input type="search" id="search" placeholder="Search events &amp; params…">
+  <input type="search" id="search" placeholder="Search">
   <button id="domainsBtn">sGTM domains</button>
   <button id="pause">Pause</button>
   <button id="clear">Clear</button>
@@ -1100,6 +1142,7 @@ const store = {
 S.sel = new Set(store.get("atd.sel", []));
 S.q = store.get("atd.q", "");
 $("search").value = S.q;
+setQuery(S.q);
 
 function fmtTime(ms) {
   const d = new Date(ms);
@@ -1110,24 +1153,23 @@ function fmtVal(v) {
   if (typeof v === "object") return JSON.stringify(v);
   return String(v);
 }
-function preview(params) {
-  const skip = new Set(["_eventName", "eventName", "event_name", "event_type", "event", "en", "name", "type"]);
-  const flat = [];
-  for (const [k, v] of Object.entries(params || {})) {
-    if (v && typeof v === "object" && !Array.isArray(v)) flat.push(...Object.entries(v));
-    else flat.push([k, v]);
-  }
-  return flat.filter(([k, v]) => typeof v !== "object" && !skip.has(k) && !/^(firebase_|_)/.test(k))
-    .slice(0, 5).map(([k, v]) => k + "=" + fmtVal(v)).join("  ");
-}
 function endpoint(u) {
   try { const x = new URL(u); return x.host + x.pathname; } catch (e) { return u; }
 }
 function visible(h) {
   if (S.sel.size ? !S.sel.has(h.tool) : h.tool === "other") return false;
   if (!S.q) return true;
-  const q = S.q.toLowerCase();
-  return h.event.toLowerCase().includes(q) || h.host.toLowerCase().includes(q) || JSON.stringify(h.params).toLowerCase().includes(q);
+  // regex (case-insensitive); an invalid pattern falls back to plain text search
+  const test = S.re ? (txt => S.re.test(txt)) : (txt => txt.toLowerCase().includes(S.q.toLowerCase()));
+  return test(h.event) || test(h.url) || test(String(h.status ?? "")) || test(JSON.stringify(h.params));
+}
+function setQuery(q) {
+  S.q = q;
+  S.re = null;
+  let bad = false;
+  if (q) { try { S.re = new RegExp(q, "i"); } catch (e) { bad = true; } }
+  $("search").classList.toggle("bad", bad);
+  $("search").title = bad ? "Invalid regex - searching as plain text" : "Regex supported, e.g. purchase|add_to_cart";
 }
 function tool(key) { return S.tools[key] || { label: key, color: "#888" }; }
 
@@ -1161,10 +1203,9 @@ function renderList() {
       <td class="tool"><span class="badge" style="--c:${t.color}">${esc(t.label)}</span></td>
       <td class="url" title="${esc(h.url)}">${esc(endpoint(h.url))}</td>
       <td class="st ${bad ? "bad" : ""}">${esc(h.status ?? "")}</td>
-      <td class="ev" title="${esc(h.event)}">${esc(h.event)}</td>
-      <td class="pv">${esc(preview(h.params))}</td></tr>`);
+      <td class="ev" title="${esc(h.event)}">${esc(h.event)}</td></tr>`);
   }
-  const head = `<thead><tr><th class="t">Time</th><th class="tool">Tool</th><th class="url">URL</th><th class="st">Status</th><th class="ev">Event</th><th class="pv">Parameters</th></tr></thead>`;
+  const head = `<thead><tr><th class="t">Time</th><th class="tool">Tool</th><th class="url">URL</th><th class="st">Status</th><th class="ev">Event</th></tr></thead>`;
   $("list").innerHTML = rows.length ? `<table class="hits">${head}<tbody>${rows.join("")}</tbody></table>`
     : `<div class="empty">${S.hits.length ? "No hits match the filter." : "No hits yet. Use the app with the proxy enabled."}</div>`;
   $("count").textContent = `${n} hit${n === 1 ? "" : "s"}`;
@@ -1253,7 +1294,7 @@ $("list").addEventListener("click", e => {
   tr.classList.add("sel");
   renderDetail();
 });
-$("search").addEventListener("input", e => { S.q = e.target.value.trim(); store.set("atd.q", S.q); renderList(); });
+$("search").addEventListener("input", e => { setQuery(e.target.value.trim()); store.set("atd.q", S.q); renderList(); });
 $("pause").onclick = () => {
   S.paused = !S.paused;
   $("pause").textContent = S.paused ? "Resume" : "Pause";
