@@ -95,9 +95,19 @@ scripts:
 
 1. Start `mitmweb`.
 2. Find your computer's local IP address (the iPhone must be on the same Wi-Fi):
-   - **macOS:** run `ipconfig getifaddr en0`, or System Settings → Wi-Fi → Details → IP address
-   - **Windows:** run `ipconfig` and look for *IPv4 Address*
-   - **Linux:** run `hostname -I`
+   - **macOS** (Terminal):
+     ```bash
+     ipconfig getifaddr en0 || ipconfig getifaddr en1
+     ```
+   - **Windows** (PowerShell):
+     ```powershell
+     (Get-NetIPConfiguration | Where-Object { $_.IPv4DefaultGateway }).IPv4Address.IPAddress
+     ```
+   - **Linux:**
+     ```bash
+     ip route get 1.1.1.1 | awk '{for(i=1;i<=NF;i++) if($i=="src") print $(i+1)}'
+     ```
+   - Or in the system network settings (Wi-Fi / Network → Details → IP address).
 3. On the iPhone: Settings → Wi-Fi → (i) next to your network → Configure Proxy → **Manual**. Server = your computer's IP (e.g. `192.168.1.20`), Port = `8080`.
 4. Open **http://mitm.it** on the iPhone and install the mitmproxy certificate: Settings → General → VPN & Device Management → install, then Settings → General → About → Certificate Trust Settings → enable
 5. Use the app and type `~comment GA4` into the mitmweb search box.
