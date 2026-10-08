@@ -1,4 +1,4 @@
-# GA4 / Firebase Analytics decoder for mitmproxy
+# iOS App Tracking Debugger
 
 A tool for QA-ing the outgoing analytics hits of an iOS app: see every request your app sends, and read the Google Analytics 4 ones as plain events — right in [mitmproxy](https://www.mitmproxy.org/).
 

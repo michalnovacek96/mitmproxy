@@ -1,5 +1,5 @@
 """
-GA4 / Firebase Analytics decoder for mitmproxy
+iOS App Tracking Debugger (mitmproxy addon)
 
 Decodes the protobuf payload that the Firebase Analytics SDK (iOS / Android)
 sends to https://app-measurement.com/a (and region1.*, app-analytics-services*.com)
