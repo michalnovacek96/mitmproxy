@@ -281,10 +281,39 @@ def _decode_unknown(wt: int, val):
     try:
         sub = parse_fields(val)
         if sub:
-            return {f"#{f}": _decode_unknown(w, v) for f, w, v in sub}
+            out: dict = {}
+            for f, w, v in sub:
+                key, value = f"#{f}", _decode_unknown(w, v)
+                if key in out:
+                    # repeated field -> list
+                    if not isinstance(out[key], list) or not out.get("__rep_" + key):
+                        out[key] = [out[key]]
+                        out["__rep_" + key] = True
+                    out[key].append(value)
+                else:
+                    out[key] = value
+            return {k: v for k, v in out.items() if not k.startswith("__rep_")}
     except DecodeError:
         pass
     return f"<bytes {val.hex()}>"
+
+
+def decode_generic(data: bytes):
+    """Schema-less protobuf decoding (field numbers as keys)."""
+    data = unpack_body(data)
+    if not data:
+        return None
+    return _decode_unknown(2, data)
+
+
+def _is_protobuf(data: bytes) -> bool:
+    data = unpack_body(data)
+    if not data or _as_text(data) is not None:
+        return False
+    try:
+        return bool(parse_fields(data))
+    except DecodeError:
+        return False
 
 
 def decode(buf: bytes, schema: dict) -> dict:
@@ -819,6 +848,17 @@ def extract_hits(flow: http.HTTPFlow) -> list[dict]:
             cfg = decode(body, CONFIG) if body else {}
             register_sgtm(sgtm_hosts(cfg))
             events = [("config", pretty_config(cfg) if cfg else {"response": "empty (not modified?)"}, {"request": query} if query else {}, None)]
+        elif tool == "ga4" and not re.match(r"^/a/?$", path.split("?")[0]):
+            # other Firebase endpoints (sdk-exp, ...) - schema-less protobuf
+            resp = flow.response.get_content(strict=False) if flow.response else b""
+            req_msg = decode_generic(raw) if raw else None
+            params = req_msg if isinstance(req_msg, dict) else ({"body": req_msg} if req_msg else {})
+            if query:
+                params = {**query, **params}
+            extra = {"response": decode_generic(resp) if _is_protobuf(resp) else (parse_body(flow.response) if resp else None)}
+            if not isinstance(extra["response"], dict):
+                extra = {"response": {"body": extra["response"]}} if extra["response"] else {}
+            events = [(_last_segment(path), params, extra, None)]
         elif tool in ("ga4", "sgtm") and _looks_like_ga4_batch(raw):
             events = _extract_ga4_app(raw)
         else:
@@ -1044,6 +1084,27 @@ class FirebaseConfig(contentviews.Contentview):
 
 
 contentviews.add(FirebaseConfig)
+
+
+class FirebaseProtobuf(contentviews.Contentview):
+    """Fallback for other Firebase endpoints (sdk-exp, ...): protobuf without schema."""
+
+    name = "Firebase Protobuf"
+    syntax_highlight = "yaml"
+
+    def prettify(self, data: bytes, metadata: contentviews.Metadata) -> str:
+        return "\n".join(_render(_jsonable(decode_generic(data)))) + "\n"
+
+    def render_priority(self, data: bytes, metadata: contentviews.Metadata) -> float:
+        flow = metadata.flow
+        if not data or flow is None or not isinstance(flow, http.HTTPFlow):
+            return 0
+        if detect_tool(flow.request.pretty_host, flow.request.path) not in ("ga4", "skan", "sgtm"):
+            return 0
+        return 5 if _is_protobuf(data) else 0
+
+
+contentviews.add(FirebaseProtobuf)
 
 
 class AppTrackingDebugger:
