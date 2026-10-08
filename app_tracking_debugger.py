@@ -1159,6 +1159,17 @@ input[type=search], input[type=text] { background: var(--bg); border: 1px solid 
 .domains.open { display: flex; }
 .domains.flash { background: color-mix(in srgb, var(--accent) 14%, var(--panel)); transition: background .4s; }
 .domains .note { color: var(--accent); font-weight: 600; }
+.domains .dspacer { flex: 1; }
+button.danger { color: var(--err); }
+button.icon { font-size: 18px; line-height: 1; padding: 3px 9px; }
+.dwrap { position: relative; display: inline-block; }
+.dwrap .n { color: var(--muted); font-variant-numeric: tabular-nums; }
+.dwrap .pop { display: none; position: absolute; top: calc(100% + 6px); left: 0; z-index: 10; width: max-content; min-width: 240px; max-width: min(520px, 90vw); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 6px 20px rgba(0,0,0,.12); padding: 10px 12px; }
+.dwrap:hover .pop { display: block; }
+.dwrap .pop::before { content: ""; position: absolute; top: -8px; left: 0; right: 0; height: 8px; }
+.pop .ttl { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin-bottom: 6px; }
+.pop ul { margin: 0; padding: 0; list-style: none; font-family: var(--mono); font-size: 12px; }
+.pop li { padding: 3px 0; overflow-wrap: anywhere; }
 .domains input { width: 420px; max-width: 100%; }
 .hint { color: var(--muted); }
 main { flex: 1; display: flex; min-height: 0; }
@@ -1204,7 +1215,10 @@ table.kv { width: 100%; border-collapse: collapse; font-family: var(--mono); fon
     <h1>Mobile App Tracking Debugger <span class="dot" title="Live"></span><span class="by">by <a href="https://www.measure-apps.com" target="_blank" rel="noopener">measure-apps.com</a></span></h1>
   </div>
   <input type="search" id="search" placeholder="Search">
-  <button id="domainsBtn">sGTM domains</button>
+  <span class="dwrap">
+    <button id="domainsBtn">sGTM domains <span class="n" id="domainsCount"></span></button>
+    <div class="pop" id="domainsPop"></div>
+  </span>
   <button id="pause">Pause</button>
   <button id="clear">Clear</button>
   <span class="hint" id="count"></span>
@@ -1215,6 +1229,9 @@ table.kv { width: 100%; border-collapse: collapse; font-family: var(--mono); fon
   <button id="domainsSave">Save</button>
   <span class="hint">Comma separated. Subdomains match too.</span>
   <span class="note" id="domainsNote"></span>
+  <span class="dspacer"></span>
+  <button id="domainsForget" class="danger">Forget domains</button>
+  <button id="domainsClose" class="icon" title="Close" aria-label="Close">&times;</button>
 </div>
 <div class="bar" id="chips"></div>
 <main>
@@ -1348,6 +1365,7 @@ async function poll() {
       if (JSON.stringify(d.domains) !== JSON.stringify(S.domains)) {
         const added = S.domainsLoaded ? d.domains.filter(x => !S.domains.includes(x)) : [];
         S.domains = d.domains;
+        renderDomains();
         if (document.activeElement !== $("domainsInput")) $("domainsInput").value = d.domains.join(", ");
         if (added.length && !S.savingDomains) {
           // detected automatically (Firebase config) -> show the settings with the new domain
@@ -1399,19 +1417,35 @@ $("pause").onclick = () => {
   $("hdr").classList.toggle("paused", S.paused);
 };
 $("clear").onclick = async () => { await fetch("/api/clear", { method: "POST" }); S.selected = null; renderDetail(); };
-$("domainsBtn").onclick = () => $("domains").classList.toggle("open");
-$("domainsSave").onclick = async () => {
-  const list = $("domainsInput").value.split(/[\s,]+/).filter(Boolean);
+function renderDomains() {
+  $("domainsCount").textContent = S.domains.length ? `(${S.domains.length})` : "";
+  $("domainsPop").innerHTML = `<div class="ttl">Remembered sGTM domains</div>` + (S.domains.length
+    ? `<ul>${S.domains.map(x => `<li>${esc(x)}</li>`).join("")}</ul>`
+    : `<div class="hint">None yet. They are detected from the Firebase config or added by hand.</div>`);
+}
+async function saveDomains(list) {
   S.savingDomains = true;
   const r = await fetch("/api/domains", { method: "POST", body: JSON.stringify(list) });
   const d = await r.json();
   S.savingDomains = false;
-  S.domains = d.domains; $("domainsInput").value = d.domains.join(", "); $("domainsNote").textContent = "";
+  S.domains = d.domains; renderDomains();
+  $("domainsInput").value = d.domains.join(", "); $("domainsNote").textContent = "";
+}
+$("domainsBtn").onclick = () => $("domains").classList.toggle("open");
+$("domainsClose").onclick = () => $("domains").classList.remove("open");
+$("domainsForget").onclick = async () => {
+  if (!S.domains.length) return;
+  if (!confirm(`Forget all ${S.domains.length} remembered sGTM domain(s)?`)) return;
+  await saveDomains([]);
+};
+$("domainsSave").onclick = async () => {
+  await saveDomains($("domainsInput").value.split(/[\s,]+/).filter(Boolean));
   $("domainsSave").textContent = "Saved";
   setTimeout(() => $("domainsSave").textContent = "Save", 1200);
 };
 $("domainsInput").addEventListener("keydown", e => { if (e.key === "Enter") $("domainsSave").click(); });
 render();
+renderDomains();
 poll();
 </script>
 </body>
