@@ -998,10 +998,9 @@ UI_HTML = r"""<!doctype html>
 html, body { margin: 0; height: 100%; }
 body { background: var(--bg); color: var(--text); font: 13px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; flex-direction: column; }
 header { display: flex; align-items: center; gap: 12px; padding: 10px 16px; background: var(--panel); border-bottom: 1px solid var(--line); flex-wrap: wrap; }
-header h1 { font-size: 15px; margin: 0; font-weight: 600; }
+header h1 { font-size: 15px; margin: 0 12px 0 0; font-weight: 600; }
 .dot { width: 8px; height: 8px; border-radius: 50%; background: #34a853; display: inline-block; margin-right: 6px; }
 .paused .dot { background: var(--muted); }
-.spacer { flex: 1; }
 button, input { font: inherit; color: inherit; }
 button { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 5px 10px; cursor: pointer; }
 button:hover { background: var(--hover); }
@@ -1055,12 +1054,11 @@ table.kv { width: 100%; border-collapse: collapse; font-family: var(--mono); fon
 <body>
 <header id="hdr">
   <h1><span class="dot"></span>App Tracking Debugger</h1>
-  <span class="hint" id="count"></span>
-  <span class="spacer"></span>
   <input type="search" id="search" placeholder="Search events &amp; params…">
   <button id="domainsBtn">sGTM domains</button>
   <button id="pause">Pause</button>
   <button id="clear">Clear</button>
+  <span class="hint" id="count"></span>
 </header>
 <div class="domains" id="domains">
   <span>Custom sGTM domains:</span>
