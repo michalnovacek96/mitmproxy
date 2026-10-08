@@ -104,7 +104,7 @@ BUNDLE = {
     27: ("resettable_device_id_alt", "str"),
     30: ("firebase_instance_id", "str"),
     31: ("app_version_major", "int"),
-    35: ("unknown_35 (proto: target_os_version)", "str"),
+    35: ("config_version", "int"),
     46: ("system_properties_dynamite_version", "str"),
     52: ("gcs_google_consent_state", "str"),
     71: ("consent_diagnostics", "str"),
@@ -112,6 +112,18 @@ BUNDLE = {
 }
 
 BATCH = {1: ("bundle", "msg", BUNDLE)}
+
+# app-measurement.com/config/app/<firebase app id> - measurement config the SDK downloads
+CONFIG = {
+    1: ("config_version", "int"),
+    2: ("firebase_app_id", "str"),
+    4: ("setting", "msg", {1: ("key", "str"), 2: ("value", "str")}),
+    5: ("event", "msg", {1: ("name", "str"), 3: ("key_event", "int")}),
+    10: ("service", "msg", {1: ("name", "str"), 3: ("enabled", "int")}),
+    11: ("upload_region", "str"),
+    14: ("measurement_id", "str"),
+    17: ("sgtm", "msg", {1: ("url", "str"), 3: ("url_2", "str"), 4: ("percentage", "int"), 5: ("url_3", "str")}),
+}
 
 # app-analytics-services.com/skan - SKAdNetwork request sent by the Firebase SDK
 SKAN_REQUEST = {
@@ -519,8 +531,8 @@ def render_batch(batch: dict) -> str:
 
 # key, label, color, host suffixes, path regex (None = any path)
 TOOLS = [
-    ("ga4", "GA4 (Firebase)", "#e8710a", HOST_SUFFIXES, r"^/a/?$"),
     ("skan", "Firebase SKAN", "#5e35b1", HOST_SUFFIXES, r"^/skan"),
+    ("ga4", "GA4 (Firebase)", "#e8710a", HOST_SUFFIXES, None),
     ("ga4web", "GA4 (web)", "#f9ab00", ("google-analytics.com", "analytics.google.com"), r"/g/collect"),
     ("firebase", "Firebase", "#ffa000", (
         "firebaseinstallations.googleapis.com", "firebaseremoteconfig.googleapis.com",
@@ -585,7 +597,59 @@ def detect_tool(host: str, path: str) -> str:
     for key, _, _, suffixes, path_re in TOOLS:
         if _host_match(host, suffixes) and (path_re is None or re.search(path_re, path)):
             return key
+    # Firebase traffic routed through a custom endpoint (e.g. sGTM .../app-measurement/a)
+    if re.search(r"app-measurement|app-analytics-services", host + path):
+        return "sgtm"
     return "other"
+
+
+def pretty_config(cfg: dict) -> dict:
+    """Readable form of the Firebase measurement config."""
+    out: dict = {}
+    for key in ("measurement_id", "firebase_app_id", "upload_region"):
+        if key in cfg:
+            out[key] = cfg[key]
+    for sg in cfg.get("sgtm", []):
+        urls = list(dict.fromkeys(sg[k] for k in ("url", "url_2", "url_3") if k in sg))
+        out["sgtm_url"] = urls[0] if len(urls) == 1 else urls
+        if "percentage" in sg:
+            out["sgtm_percentage"] = f"{sg['percentage']} %"
+    if "sgtm_url" not in out:
+        out["sgtm_url"] = "not configured"
+    if "config_version" in cfg:
+        out["config_version"] = f"{cfg['config_version']} ({_fmt_time(cfg['config_version'] // 1000)})"
+    events = cfg.get("event", [])
+    if events:
+        out["key_events"] = [e.get("name", "?") for e in events if e.get("key_event")]
+        other = [e.get("name", "?") for e in events if not e.get("key_event")]
+        if other:
+            out["events_config"] = other
+    for svc in cfg.get("service", []):
+        out[svc.get("name", "?")] = bool(svc.get("enabled"))
+    if cfg.get("setting"):
+        out["settings"] = {st.get("key", "?"): st.get("value") for st in cfg["setting"]}
+    known = {"measurement_id", "firebase_app_id", "upload_region", "sgtm", "config_version", "event", "service", "setting"}
+    out.update({k: v for k, v in cfg.items() if k not in known})
+    return out
+
+
+def sgtm_hosts(cfg: dict) -> set[str]:
+    hosts = set()
+    for sg in cfg.get("sgtm", []):
+        for k in ("url", "url_2", "url_3"):
+            if sg.get(k):
+                host = urllib.parse.urlsplit(sg[k]).hostname
+                if host:
+                    hosts.add(host.lower())
+    return hosts
+
+
+def register_sgtm(hosts: set[str]) -> None:
+    new = hosts - CUSTOM_DOMAINS
+    if new:
+        CUSTOM_DOMAINS.update(new)
+        _save_domains()
+        logger.warning(f"sGTM endpoint detected from Firebase config: {', '.join(sorted(new))}")
 
 
 def _is_ga4(flow) -> bool:
@@ -750,7 +814,12 @@ def extract_hits(flow: http.HTTPFlow) -> list[dict]:
         if tool == "skan":
             extra = {"response": decode_skan_response(flow.response)} if flow.response else {}
             events = [("skan", decode(unpack_body(raw), SKAN_REQUEST), extra, None)]
-        elif tool == "ga4" or (tool == "sgtm" and _looks_like_ga4_batch(raw)):
+        elif tool == "ga4" and "/config/app" in path:
+            body = unpack_body(flow.response.get_content(strict=False) or b"") if flow.response else b""
+            cfg = decode(body, CONFIG) if body else {}
+            register_sgtm(sgtm_hosts(cfg))
+            events = [("config", pretty_config(cfg) if cfg else {"response": "empty (not modified?)"}, {"request": query} if query else {}, None)]
+        elif tool in ("ga4", "sgtm") and _looks_like_ga4_batch(raw):
             events = _extract_ga4_app(raw)
         else:
             body = parse_body(req)
@@ -931,10 +1000,8 @@ class GA4AppMeasurement(contentviews.Contentview):
         # request body only (the response is empty / unrelated)
         if metadata.http_message is not None and not isinstance(metadata.http_message, http.Request):
             return 0
-        # custom sGTM domains also receive other formats - only claim real GA4 batches
-        if detect_tool(flow.request.pretty_host, flow.request.path) == "sgtm" and not _looks_like_ga4_batch(data):
-            return 0
-        return 10
+        # only claim real GA4 batches (config, sGTM etc. use other formats)
+        return 10 if _looks_like_ga4_batch(data) else 0
 
 
 contentviews.add(GA4AppMeasurement)
@@ -957,6 +1024,26 @@ class FirebaseSKAN(contentviews.Contentview):
 
 
 contentviews.add(FirebaseSKAN)
+
+
+class FirebaseConfig(contentviews.Contentview):
+    name = "Firebase Config"
+    syntax_highlight = "yaml"
+
+    def prettify(self, data: bytes, metadata: contentviews.Metadata) -> str:
+        cfg = pretty_config(decode(unpack_body(data), CONFIG))
+        return "\n".join(_render(_jsonable(cfg))) + "\n"
+
+    def render_priority(self, data: bytes, metadata: contentviews.Metadata) -> float:
+        flow = metadata.flow
+        if not data or flow is None or not isinstance(flow, http.HTTPFlow):
+            return 0
+        if isinstance(metadata.http_message, http.Request) or "/config/app" not in flow.request.path:
+            return 0
+        return 10 if detect_tool(flow.request.pretty_host, flow.request.path) == "ga4" else 0
+
+
+contentviews.add(FirebaseConfig)
 
 
 class AppTrackingDebugger:

@@ -12,7 +12,9 @@ Open **http://127.0.0.1:8082** while mitmweb is running. You get a live list of 
 
 Detected tools: GA4 (Firebase), GA4 (web), Firebase, Crashlytics, Adjust, AppsFlyer, Meta, Branch, Singular, Kochava, Airbridge, TikTok, Snapchat, Google Ads, Mixpanel, Amplitude, Segment, Braze, CleverTap, OneSignal, AppMetrica, RevenueCat, Sentry, Datadog, Clarity.
 
-**Server-side GTM:** click **sGTM domains** and add your own measurement domain (e.g. `sgtm.example.com`). Hits sent there are shown as **sGTM** and GA4 payloads in them are decoded too. The list is saved and kept after restart.
+**Server-side GTM is detected automatically.** On start the Firebase SDK downloads its measurement config from `app-measurement.com/config/app/<firebase app id>`. The addon decodes it, finds the sGTM endpoint (if the app has one) and adds its domain to the sGTM list. Any request with `app-measurement` in the URL on a non-Google domain is shown as **sGTM** as well. GA4 payloads sent there are decoded like the ones sent to Google. You can also add domains by hand under **sGTM domains**; the list is kept after restart.
+
+The decoded config also shows the GA4 measurement ID, key events, upload region and SDK limits.
 
 ## GA4 decoding
 
