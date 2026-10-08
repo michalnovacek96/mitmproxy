@@ -283,7 +283,7 @@ def decode(buf: bytes, schema: dict) -> dict:
         if spec is None:
             key = f"unknown_{field}"
             value = _decode_unknown(wt, val)
-            repeated = True
+            repeated = False  # becomes a list only if the field occurs more than once
         else:
             key, typ = spec[0], spec[1]
             repeated = typ == "msg"
