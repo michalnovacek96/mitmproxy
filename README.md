@@ -103,16 +103,6 @@ scripts:
 5. Use the app and type `~comment GA4` into the mitmweb search box.
 6. Click a `POST /a` request → **Request** tab. Make sure the view selector (bottom right) is set to **auto**.
 
-**Tip:** Firebase batches events and may upload them minutes later. Enable debug mode to get them almost instantly:
-
-- add `-FIRDebugEnabled` to the scheme's launch arguments in Xcode
-
-`mitmdump` additionally prints one line per event to the console:
-
-```
-[GA4] view_item | currency=EUR, value=89, items=[...]
-```
-
 ## Limitations
 
 The protobuf schema is community reverse-engineered and not complete. A few fields are not known yet and are hidden from the view. Contributions to the schema are welcome at [lari/firebase-ga4-app-measurement-protobuf](https://github.com/lari/firebase-ga4-app-measurement-protobuf).
