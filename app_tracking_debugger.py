@@ -728,6 +728,8 @@ def parse_body(req: http.Request):
             pass
     text = _as_text(data)
     if text is None:
+        if _is_protobuf(data):
+            return decode_generic(data)
         return f"<binary {len(data)} bytes>"
     s = text.strip()
     if s[:1] in "{[":
@@ -1087,9 +1089,9 @@ contentviews.add(FirebaseConfig)
 
 
 class FirebaseProtobuf(contentviews.Contentview):
-    """Fallback for other Firebase endpoints (sdk-exp, ...): protobuf without schema."""
+    """Fallback for binary protobuf payloads of any detected tool (Firebase sdk-exp, ...)."""
 
-    name = "Firebase Protobuf"
+    name = "Tracking Protobuf"
     syntax_highlight = "yaml"
 
     def prettify(self, data: bytes, metadata: contentviews.Metadata) -> str:
@@ -1099,7 +1101,7 @@ class FirebaseProtobuf(contentviews.Contentview):
         flow = metadata.flow
         if not data or flow is None or not isinstance(flow, http.HTTPFlow):
             return 0
-        if detect_tool(flow.request.pretty_host, flow.request.path) not in ("ga4", "skan", "sgtm"):
+        if detect_tool(flow.request.pretty_host, flow.request.path) == "other":
             return 0
         return 5 if _is_protobuf(data) else 0
 
