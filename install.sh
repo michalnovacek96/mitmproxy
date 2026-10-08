@@ -23,15 +23,22 @@ fi
 
 if [ -f "$CONFIG" ] && grep -q "app_tracking_debugger.py" "$CONFIG"; then
   echo "Already registered in $CONFIG"
+elif [ -f "$CONFIG" ] && grep -qx "scripts:[[:space:]]*" "$CONFIG"; then
+  # existing block list -> add our script as its first item
+  awk -v dest="$DEST" '{ print } /^scripts:[[:space:]]*$/ { print "  - " dest }' "$CONFIG" > "$CONFIG.tmp" && mv "$CONFIG.tmp" "$CONFIG"
+  echo "Registered in $CONFIG"
 elif [ -f "$CONFIG" ] && grep -q "^scripts:" "$CONFIG"; then
   echo
-  echo "Your $CONFIG already has a 'scripts:' section."
-  echo "Add this line under it manually:"
-  echo "  - $DEST"
-  exit 0
+  echo "Your $CONFIG already has a 'scripts:' entry. Add this script to it manually:"
+  echo "  $DEST"
 else
   printf '\nscripts:\n  - %s\n' "$DEST" >> "$CONFIG"
   echo "Registered in $CONFIG"
+fi
+
+# open only the tracking hits UI on start, not mitmweb's own page
+if ! grep -q "^web_open_browser:" "$CONFIG"; then
+  printf 'web_open_browser: false\n' >> "$CONFIG"
 fi
 
 VERSION=$(sed -n 's/^__version__ = "\(.*\)"/\1/p' "$DEST")

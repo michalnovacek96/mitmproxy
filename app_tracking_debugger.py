@@ -1137,6 +1137,7 @@ class AppTrackingDebugger:
         threading.Thread(target=self.server.serve_forever, daemon=True).start()
         logger.warning(f"Mobile App Tracking Debugger {__version__} UI: http://127.0.0.1:{port}")
         # open the UI together with mitmweb - once per process, not on every script reload
+        # (mitmweb's own tab is turned off with web_open_browser: false in config.yaml)
         if web_port and ctx.options.tracking_ui_open and not os.environ.get("ATD_UI_OPENED"):
             os.environ["ATD_UI_OPENED"] = "1"
             webbrowser.open(f"http://127.0.0.1:{port}")
