@@ -987,7 +987,7 @@ UI_HTML = r"""<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>App Tracking Debugger</title>
+<title>App Tracking Debugger | measure-apps.com</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20width%3D%2232%22%20height%3D%2232%22%20viewBox%3D%220%200%2032%2032%22%20fill%3D%22none%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Crect%20x%3D%226%22%20y%3D%222%22%20width%3D%2220%22%20height%3D%2228%22%20rx%3D%223%22%20stroke%3D%22%231a1a1a%22%20stroke-width%3D%222%22%20fill%3D%22%23ffffff%22/%3E%3Crect%20x%3D%228%22%20y%3D%226%22%20width%3D%2216%22%20height%3D%2217%22%20fill%3D%22%23298F89%22%20fill-opacity%3D%220.2%22/%3E%3Crect%20x%3D%2210%22%20y%3D%2216%22%20width%3D%223%22%20height%3D%227%22%20fill%3D%22%23298F89%22/%3E%3Crect%20x%3D%2214.5%22%20y%3D%2212%22%20width%3D%223%22%20height%3D%2211%22%20fill%3D%22%23298F89%22/%3E%3Crect%20x%3D%2219%22%20y%3D%228%22%20width%3D%223%22%20height%3D%2215%22%20fill%3D%22%231a1a1a%22/%3E%3Ccircle%20cx%3D%2216%22%20cy%3D%2226%22%20r%3D%221.5%22%20fill%3D%22%231a1a1a%22/%3E%3C/svg%3E">
 <style>
 :root {
@@ -1038,9 +1038,12 @@ table.hits { width: 100%; border-collapse: collapse; table-layout: fixed; }
 .hits tr.sel td { background: var(--sel); }
 .t { width: 112px; color: var(--muted); font-family: var(--mono); font-size: 12px; }
 .tool { width: 128px; }
-.ev { width: 30%; font-weight: 600; }
+.ev { width: 22%; font-weight: 600; }
+.url { width: 24%; color: var(--muted); font-family: var(--mono); font-size: 12px; }
+.hits thead th { position: sticky; top: 0; z-index: 1; background: var(--panel); text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+
 .pv { color: var(--muted); font-family: var(--mono); font-size: 12px; }
-.st { width: 56px; text-align: right; font-family: var(--mono); font-size: 12px; color: var(--muted); }
+.st { width: 64px; text-align: left; font-family: var(--mono); font-size: 12px; color: var(--muted); }
 .st.bad { color: var(--err); }
 .badge { display: inline-block; padding: 1px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; color: #fff; background: var(--c); max-width: 100%; overflow: hidden; text-overflow: ellipsis; vertical-align: middle; }
 .empty { padding: 40px 16px; text-align: center; color: var(--muted); }
@@ -1057,7 +1060,7 @@ table.kv { width: 100%; border-collapse: collapse; font-family: var(--mono); fon
 @media (max-width: 800px) {
   main { flex-direction: column; }
   #detail { border-left: 0; border-top: 1px solid var(--line); flex-basis: 50%; }
-  .pv { display: none; }
+  .pv, .url { display: none; }
   .ev { width: auto; }
   .tool { width: 104px; }
 }
@@ -1117,6 +1120,9 @@ function preview(params) {
   return flat.filter(([k, v]) => typeof v !== "object" && !skip.has(k) && !/^(firebase_|_)/.test(k))
     .slice(0, 5).map(([k, v]) => k + "=" + fmtVal(v)).join("  ");
 }
+function endpoint(u) {
+  try { const x = new URL(u); return x.host + x.pathname; } catch (e) { return u; }
+}
 function visible(h) {
   if (S.sel.size ? !S.sel.has(h.tool) : h.tool === "other") return false;
   if (!S.q) return true;
@@ -1153,11 +1159,13 @@ function renderList() {
     rows.push(`<tr data-id="${h.id}" class="${h.id === S.selected ? "sel" : ""}">
       <td class="t">${fmtTime(h.time)}</td>
       <td class="tool"><span class="badge" style="--c:${t.color}">${esc(t.label)}</span></td>
+      <td class="url" title="${esc(h.url)}">${esc(endpoint(h.url))}</td>
+      <td class="st ${bad ? "bad" : ""}">${esc(h.status ?? "")}</td>
       <td class="ev" title="${esc(h.event)}">${esc(h.event)}</td>
-      <td class="pv">${esc(preview(h.params))}</td>
-      <td class="st ${bad ? "bad" : ""}">${esc(h.status ?? "")}</td></tr>`);
+      <td class="pv">${esc(preview(h.params))}</td></tr>`);
   }
-  $("list").innerHTML = rows.length ? `<table class="hits">${rows.join("")}</table>`
+  const head = `<thead><tr><th class="t">Time</th><th class="tool">Tool</th><th class="url">URL</th><th class="st">Status</th><th class="ev">Event</th><th class="pv">Parameters</th></tr></thead>`;
+  $("list").innerHTML = rows.length ? `<table class="hits">${head}<tbody>${rows.join("")}</tbody></table>`
     : `<div class="empty">${S.hits.length ? "No hits match the filter." : "No hits yet. Use the app with the proxy enabled."}</div>`;
   $("count").textContent = `${n} hit${n === 1 ? "" : "s"}`;
 }
