@@ -988,24 +988,30 @@ UI_HTML = r"""<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>App Tracking Debugger</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20width%3D%2232%22%20height%3D%2232%22%20viewBox%3D%220%200%2032%2032%22%20fill%3D%22none%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Crect%20x%3D%226%22%20y%3D%222%22%20width%3D%2220%22%20height%3D%2228%22%20rx%3D%223%22%20stroke%3D%22%231a1a1a%22%20stroke-width%3D%222%22%20fill%3D%22%23ffffff%22/%3E%3Crect%20x%3D%228%22%20y%3D%226%22%20width%3D%2216%22%20height%3D%2217%22%20fill%3D%22%23298F89%22%20fill-opacity%3D%220.2%22/%3E%3Crect%20x%3D%2210%22%20y%3D%2216%22%20width%3D%223%22%20height%3D%227%22%20fill%3D%22%23298F89%22/%3E%3Crect%20x%3D%2214.5%22%20y%3D%2212%22%20width%3D%223%22%20height%3D%2211%22%20fill%3D%22%23298F89%22/%3E%3Crect%20x%3D%2219%22%20y%3D%228%22%20width%3D%223%22%20height%3D%2215%22%20fill%3D%22%231a1a1a%22/%3E%3Ccircle%20cx%3D%2216%22%20cy%3D%2226%22%20r%3D%221.5%22%20fill%3D%22%231a1a1a%22/%3E%3C/svg%3E">
 <style>
 :root {
   --bg: #f6f7f9; --panel: #ffffff; --text: #1d2129; --muted: #6b7280; --line: #e5e7eb;
-  --hover: #f1f5f9; --sel: #e8f0fe; --accent: #1a73e8; --err: #d93025;
+  --hover: #f1f5f9; --sel: #e3f1f0; --accent: #298f89; --err: #d93025;
   --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 @media (prefers-color-scheme: dark) {
   :root {
     --bg: #111317; --panel: #1a1d23; --text: #e6e8eb; --muted: #9aa0a6; --line: #2a2e36;
-    --hover: #22262e; --sel: #1f3350; --accent: #8ab4f8; --err: #f28b82;
+    --hover: #22262e; --sel: #17383a; --accent: #4fb8b1; --err: #f28b82;
   }
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; }
 body { background: var(--bg); color: var(--text); font: 13px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; flex-direction: column; }
 header { display: flex; align-items: center; gap: 12px; padding: 10px 16px; background: var(--panel); border-bottom: 1px solid var(--line); flex-wrap: wrap; }
-header h1 { font-size: 15px; margin: 0 12px 0 0; font-weight: 600; }
-.dot { width: 8px; height: 8px; border-radius: 50%; background: #34a853; display: inline-block; margin-right: 6px; }
+header h1 { font-size: 15px; margin: 0; font-weight: 600; line-height: 1.2; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); display: inline-block; margin-left: 4px; vertical-align: middle; }
+.brand { display: flex; align-items: center; gap: 8px; margin-right: 12px; }
+.brand svg { width: 26px; height: 26px; flex: none; }
+.brand .by { display: block; font-size: 11px; color: var(--muted); font-weight: 400; }
+.brand .by a { color: var(--accent); text-decoration: none; }
+.brand .by a:hover { text-decoration: underline; }
 .paused .dot { background: var(--muted); }
 button, input { font: inherit; color: inherit; }
 button { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 5px 10px; cursor: pointer; }
@@ -1059,7 +1065,10 @@ table.kv { width: 100%; border-collapse: collapse; font-family: var(--mono); fon
 </head>
 <body>
 <header id="hdr">
-  <h1><span class="dot"></span>App Tracking Debugger</h1>
+  <div class="brand">
+    <a href="https://www.measure-apps.com" target="_blank" rel="noopener" aria-label="measure-apps.com"><svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="6" y="2" width="20" height="28" rx="3" stroke="#1a1a1a" stroke-width="2" fill="#ffffff"/><rect x="8" y="6" width="16" height="17" fill="#298F89" fill-opacity="0.2"/><rect x="10" y="16" width="3" height="7" fill="#298F89"/><rect x="14.5" y="12" width="3" height="11" fill="#298F89"/><rect x="19" y="8" width="3" height="15" fill="#1a1a1a"/><circle cx="16" cy="26" r="1.5" fill="#1a1a1a"/></svg></a>
+    <h1>App Tracking Debugger <span class="dot" title="Live"></span><span class="by">by <a href="https://www.measure-apps.com" target="_blank" rel="noopener">measure-apps.com</a></span></h1>
+  </div>
   <input type="search" id="search" placeholder="Search events &amp; params…">
   <button id="domainsBtn">sGTM domains</button>
   <button id="pause">Pause</button>
