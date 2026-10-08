@@ -94,10 +94,14 @@ scripts:
 ## Usage
 
 1. Start `mitmweb`.
-2. Set your iPhone's Wi-Fi proxy to your computer's IP, port `8080`.
-3. Open **http://mitm.it** on the iPhone and install the mitmproxy certificate: Settings → General → VPN & Device Management → install, then Settings → General → About → Certificate Trust Settings → enable
-4. Use the app and type `~comment GA4` into the mitmweb search box.
-5. Click a `POST /a` request → **Request** tab. Make sure the view selector (bottom right) is set to **auto**.
+2. Find your computer's local IP address (the iPhone must be on the same Wi-Fi):
+   - **macOS:** run `ipconfig getifaddr en0`, or System Settings → Wi-Fi → Details → IP address
+   - **Windows:** run `ipconfig` and look for *IPv4 Address*
+   - **Linux:** run `hostname -I`
+3. On the iPhone: Settings → Wi-Fi → (i) next to your network → Configure Proxy → **Manual**. Server = your computer's IP (e.g. `192.168.1.20`), Port = `8080`.
+4. Open **http://mitm.it** on the iPhone and install the mitmproxy certificate: Settings → General → VPN & Device Management → install, then Settings → General → About → Certificate Trust Settings → enable
+5. Use the app and type `~comment GA4` into the mitmweb search box.
+6. Click a `POST /a` request → **Request** tab. Make sure the view selector (bottom right) is set to **auto**.
 
 **Tip:** Firebase batches events and may upload them minutes later. Enable debug mode to get them almost instantly:
 
