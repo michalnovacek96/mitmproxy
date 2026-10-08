@@ -2,9 +2,10 @@
 # Installs the Mobile App Tracking Debugger so mitmproxy / mitmweb / mitmdump load it automatically.
 set -euo pipefail
 
-# GitHub repository (used when the script is run via curl | bash)
+# GitHub repository (used when the script is run via curl | bash).
+# Always downloads the latest published release, never unreleased work.
 REPO="michalnovacek96/mitmproxy"
-RAW_URL="https://raw.githubusercontent.com/$REPO/main/app_tracking_debugger.py"
+RAW_URL="https://github.com/$REPO/releases/latest/download/app_tracking_debugger.py"
 
 DIR="$HOME/.mitmproxy"
 DEST="$DIR/addons/app_tracking_debugger.py"
@@ -33,5 +34,7 @@ else
   echo "Registered in $CONFIG"
 fi
 
+VERSION=$(sed -n 's/^__version__ = "\(.*\)"/\1/p' "$DEST")
 echo
-echo "Done. Start mitmweb and open http://127.0.0.1:8082 to see the tracking hits."
+echo "Done. Installed version ${VERSION:-unknown}."
+echo "Start mitmweb - the tracking hits UI opens at http://127.0.0.1:8082"

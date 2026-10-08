@@ -13,11 +13,15 @@ Mobile App Tracking Debugger (mitmproxy addon)
 Schema based on https://github.com/lari/firebase-ga4-app-measurement-protobuf
 No dependencies, works with the official mitmproxy binaries. Requires mitmproxy 12+.
 
+https://github.com/michalnovacek96/mitmproxy - by measure-apps.com, MIT license
+
 Usage:
     mitmweb -s app_tracking_debugger.py
 """
 
 from __future__ import annotations
+
+__version__ = "1.0.0"
 
 import base64
 import gzip
@@ -979,7 +983,7 @@ class _Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         url = urllib.parse.urlsplit(self.path)
         if url.path == "/":
-            self._send(200, UI_HTML.encode(), "text/html; charset=utf-8")
+            self._send(200, UI_HTML.replace("{{VERSION}}", __version__).encode(), "text/html; charset=utf-8")
         elif url.path == "/api/hits":
             q = urllib.parse.parse_qs(url.query)
             try:
@@ -1131,7 +1135,7 @@ class AppTrackingDebugger:
             return
         self.server.daemon_threads = True
         threading.Thread(target=self.server.serve_forever, daemon=True).start()
-        logger.warning(f"Mobile App Tracking Debugger UI: http://127.0.0.1:{port}")
+        logger.warning(f"Mobile App Tracking Debugger {__version__} UI: http://127.0.0.1:{port}")
         # open the UI together with mitmweb - once per process, not on every script reload
         if web_port and ctx.options.tracking_ui_open and not os.environ.get("ATD_UI_OPENED"):
             os.environ["ATD_UI_OPENED"] = "1"
@@ -1275,7 +1279,7 @@ table.kv { width: 100%; border-collapse: collapse; font-family: var(--mono); fon
 <header id="hdr">
   <div class="brand">
     <a href="https://www.measure-apps.com" target="_blank" rel="noopener" aria-label="measure-apps.com"><svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="6" y="2" width="20" height="28" rx="3" stroke="#1a1a1a" stroke-width="2" fill="#ffffff"/><rect x="8" y="6" width="16" height="17" fill="#298F89" fill-opacity="0.2"/><rect x="10" y="16" width="3" height="7" fill="#298F89"/><rect x="14.5" y="12" width="3" height="11" fill="#298F89"/><rect x="19" y="8" width="3" height="15" fill="#1a1a1a"/><circle cx="16" cy="26" r="1.5" fill="#1a1a1a"/></svg></a>
-    <h1>Mobile App Tracking Debugger <span class="dot" title="Live"></span><span class="by">by <a href="https://www.measure-apps.com" target="_blank" rel="noopener">measure-apps.com</a></span></h1>
+    <h1>Mobile App Tracking Debugger <span class="dot" title="Live"></span><span class="by">by <a href="https://www.measure-apps.com" target="_blank" rel="noopener">measure-apps.com</a> · v{{VERSION}}</span></h1>
   </div>
   <input type="search" id="search" placeholder="Search">
   <span class="dwrap">
