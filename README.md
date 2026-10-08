@@ -124,7 +124,7 @@ Run the install command again (macOS) or download the file again (Windows). The 
 
 ## Usage
 
-1. Start `mitmweb`. The hits UI opens in your browser at http://127.0.0.1:8082.
+1. Start `mitmweb`. The hits UI opens in your browser at http://127.0.0.1:8082 (mitmweb itself stays available on http://127.0.0.1:8081).
 2. Find your computer's local IP address (the iPhone must be on the same Wi-Fi):
    - **macOS** (Terminal):
      ```bash
@@ -149,6 +149,7 @@ In mitmweb itself (http://127.0.0.1:8081) tracking requests are marked; filter t
 |---|---|---|
 | `tracking_ui_port` | `8082` | Port of the hits UI, `0` turns it off |
 | `tracking_ui_open` | `true` | Open the hits UI in the browser when mitmweb starts |
+| `web_open_browser` | `false` (set by the installer) | mitmweb's own option – whether mitmweb also opens its own page on start |
 
 Example: `mitmweb --set tracking_ui_open=false`
 
