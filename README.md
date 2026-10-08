@@ -103,10 +103,6 @@ scripts:
      ```powershell
      (Get-NetIPConfiguration | Where-Object { $_.IPv4DefaultGateway }).IPv4Address.IPAddress
      ```
-   - **Linux:**
-     ```bash
-     ip route get 1.1.1.1 | awk '{for(i=1;i<=NF;i++) if($i=="src") print $(i+1)}'
-     ```
    - Or in the system network settings (Wi-Fi / Network → Details → IP address).
 3. On the iPhone: Settings → Wi-Fi → (i) next to your network → Configure Proxy → **Manual**. Server = your computer's IP (e.g. `192.168.1.20`), Port = `8080`.
 4. Open **http://mitm.it** on the iPhone and install the mitmproxy certificate: Settings → General → VPN & Device Management → install, then Settings → General → About → Certificate Trust Settings → enable
