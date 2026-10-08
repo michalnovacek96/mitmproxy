@@ -1,8 +1,10 @@
 # GA4 / Firebase Analytics decoder for mitmproxy
 
-See exactly what your mobile app sends to Google Analytics 4 — right in [mitmproxy](https://www.mitmproxy.org/).
+A tool for QA-ing the outgoing analytics hits of an iOS app: see every request your app sends, and read the Google Analytics 4 ones as plain events — right in [mitmproxy](https://www.mitmproxy.org/).
 
-The Firebase Analytics SDK (iOS & Android) sends events to `app-measurement.com/a` as compressed binary protobuf, which is unreadable in any proxy. This addon decodes it into plain events, parameters and user properties:
+Most tracking hits are readable in a proxy as they are (JSON or query strings). GA4 is different: the Firebase Analytics SDK sends events to `app-measurement.com/a` as compressed binary protobuf, so you only see gibberish. This addon contains the special protobuf decoding logic for GA4 and turns it into plain events, parameters and user properties:
+
+> **iOS only.** The decoder works with apps running on iOS. On Android, Firebase Analytics does not send these requests from the app itself, so you won't see them in the proxy.
 
 ```yaml
 # 3 event(s): deeplink_launch, view_item, user_engagement
@@ -92,17 +94,14 @@ scripts:
 ## Usage
 
 1. Start `mitmweb`.
-2. Set your phone's Wi-Fi proxy to your computer's IP, port `8080`.
-3. Open **http://mitm.it** on the phone and install + trust the mitmproxy certificate
-   - **iOS:** Settings → General → VPN & Device Management → install, then Settings → General → About → Certificate Trust Settings → enable
-   - **Android:** apps don't trust user certificates since Android 7 — use a debug build with a `network_security_config` that allows user CAs, an emulator or a rooted device
+2. Set your iPhone's Wi-Fi proxy to your computer's IP, port `8080`.
+3. Open **http://mitm.it** on the iPhone and install the mitmproxy certificate: Settings → General → VPN & Device Management → install, then Settings → General → About → Certificate Trust Settings → enable
 4. Use the app and type `~comment GA4` into the mitmweb search box.
 5. Click a `POST /a` request → **Request** tab. Make sure the view selector (bottom right) is set to **auto**.
 
 **Tip:** Firebase batches events and may upload them minutes later. Enable debug mode to get them almost instantly:
 
-- **iOS:** add `-FIRDebugEnabled` to the scheme's launch arguments in Xcode
-- **Android:** `adb shell setprop debug.firebase.analytics.app <package_name>`
+- add `-FIRDebugEnabled` to the scheme's launch arguments in Xcode
 
 `mitmdump` additionally prints one line per event to the console:
 
