@@ -4,7 +4,7 @@ A tool for QA-ing the outgoing analytics hits of an iOS app: see every request y
 
 Most tracking hits are readable in a proxy as they are (JSON or query strings). GA4 is different: the Firebase Analytics SDK sends events to `app-measurement.com/a` as compressed binary protobuf, so you only see gibberish. This addon contains the special protobuf decoding logic for GA4 and turns it into plain events, parameters and user properties:
 
-> **iOS only.** The decoder works with apps running on iOS. On Android, Firebase Analytics does not send these requests from the app itself, so you won't see them in the proxy.
+> **iOS only.** The decoder works with apps running on iOS.
 
 ```yaml
 # 3 event(s): deeplink_launch, view_item, user_engagement
