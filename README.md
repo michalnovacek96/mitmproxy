@@ -1,4 +1,4 @@
-# iOS App Tracking Debugger
+# Mobile App Tracking Debugger
 
 A tool for QA-ing the outgoing analytics hits of an iOS app, built on top of [mitmproxy](https://www.mitmproxy.org/).
 
@@ -8,7 +8,7 @@ A tool for QA-ing the outgoing analytics hits of an iOS app, built on top of [mi
 
 Open **http://127.0.0.1:8082** while mitmweb is running. You get a live list of every analytics hit your app sends – one row per event – with the tool detected automatically. Click a tool at the top to filter, click a hit to see all its parameters.
 
-![App Tracking Debugger UI](docs/screenshot.png)
+![Mobile App Tracking Debugger UI](docs/screenshot.png)
 
 Detected tools: GA4 (Firebase), GA4 (web), Firebase, Crashlytics, Adjust, AppsFlyer, Meta, Branch, Singular, Kochava, Airbridge, TikTok, Snapchat, Google Ads, Mixpanel, Amplitude, Segment, Braze, CleverTap, OneSignal, AppMetrica, RevenueCat, Sentry, Datadog, Clarity.
 

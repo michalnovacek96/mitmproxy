@@ -1,5 +1,5 @@
 """
-iOS App Tracking Debugger (mitmproxy addon)
+Mobile App Tracking Debugger (mitmproxy addon)
 
 1. Tracking hits UI - http://127.0.0.1:8082
    Lists every outgoing analytics hit (GA4/Firebase, Adjust, AppsFlyer, Meta,
@@ -1051,8 +1051,8 @@ class AppTrackingDebugger:
         self.server: ThreadingHTTPServer | None = None
 
     def load(self, loader):
-        loader.add_option("tracking_ui_port", int, 8082, "Port of the App Tracking Debugger UI (0 = off).")
-        loader.add_option("tracking_ui_open", bool, True, "Open the App Tracking Debugger UI in the browser when mitmweb starts.")
+        loader.add_option("tracking_ui_port", int, 8082, "Port of the Mobile App Tracking Debugger UI (0 = off).")
+        loader.add_option("tracking_ui_open", bool, True, "Open the Mobile App Tracking Debugger UI in the browser when mitmweb starts.")
         _load_domains()
 
     def running(self):
@@ -1064,11 +1064,11 @@ class AppTrackingDebugger:
         try:
             self.server = ThreadingHTTPServer(("127.0.0.1", port), _Handler)
         except OSError as e:
-            logger.warning(f"App Tracking Debugger UI could not start on port {port}: {e}")
+            logger.warning(f"Mobile App Tracking Debugger UI could not start on port {port}: {e}")
             return
         self.server.daemon_threads = True
         threading.Thread(target=self.server.serve_forever, daemon=True).start()
-        logger.warning(f"App Tracking Debugger UI: http://127.0.0.1:{port}")
+        logger.warning(f"Mobile App Tracking Debugger UI: http://127.0.0.1:{port}")
         # open the UI together with mitmweb - once per process, not on every script reload
         if web_port and ctx.options.tracking_ui_open and not os.environ.get("ATD_UI_OPENED"):
             os.environ["ATD_UI_OPENED"] = "1"
@@ -1117,7 +1117,7 @@ UI_HTML = r"""<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>App Tracking Debugger | measure-apps.com</title>
+<title>Mobile App Tracking Debugger | measure-apps.com</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20width%3D%2232%22%20height%3D%2232%22%20viewBox%3D%220%200%2032%2032%22%20fill%3D%22none%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Crect%20x%3D%226%22%20y%3D%222%22%20width%3D%2220%22%20height%3D%2228%22%20rx%3D%223%22%20stroke%3D%22%231a1a1a%22%20stroke-width%3D%222%22%20fill%3D%22%23ffffff%22/%3E%3Crect%20x%3D%228%22%20y%3D%226%22%20width%3D%2216%22%20height%3D%2217%22%20fill%3D%22%23298F89%22%20fill-opacity%3D%220.2%22/%3E%3Crect%20x%3D%2210%22%20y%3D%2216%22%20width%3D%223%22%20height%3D%227%22%20fill%3D%22%23298F89%22/%3E%3Crect%20x%3D%2214.5%22%20y%3D%2212%22%20width%3D%223%22%20height%3D%2211%22%20fill%3D%22%23298F89%22/%3E%3Crect%20x%3D%2219%22%20y%3D%228%22%20width%3D%223%22%20height%3D%2215%22%20fill%3D%22%231a1a1a%22/%3E%3Ccircle%20cx%3D%2216%22%20cy%3D%2226%22%20r%3D%221.5%22%20fill%3D%22%231a1a1a%22/%3E%3C/svg%3E">
 <style>
 :root {
@@ -1157,6 +1157,8 @@ input[type=search], input[type=text] { background: var(--bg); border: 1px solid 
 .chip.off { opacity: .55; }
 .domains { display: none; gap: 8px; align-items: center; padding: 10px 16px; background: var(--panel); border-bottom: 1px solid var(--line); flex-wrap: wrap; }
 .domains.open { display: flex; }
+.domains.flash { background: color-mix(in srgb, var(--accent) 14%, var(--panel)); transition: background .4s; }
+.domains .note { color: var(--accent); font-weight: 600; }
 .domains input { width: 420px; max-width: 100%; }
 .hint { color: var(--muted); }
 main { flex: 1; display: flex; min-height: 0; }
@@ -1169,7 +1171,8 @@ table.hits { width: 100%; border-collapse: collapse; table-layout: fixed; }
 .hits tr.sel td { background: var(--sel); }
 .t { width: 112px; color: var(--muted); font-family: var(--mono); font-size: 12px; }
 .tool { width: 128px; }
-.url { color: var(--muted); font-family: var(--mono); font-size: 12px; }
+.ev { font-weight: 600; }
+.url { width: 38%; color: var(--muted); font-family: var(--mono); font-size: 12px; }
 .hits thead th { position: sticky; top: 0; z-index: 1; background: var(--panel); text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
 
 .st { width: 64px; text-align: left; font-family: var(--mono); font-size: 12px; color: var(--muted); }
@@ -1187,6 +1190,7 @@ table.kv { width: 100%; border-collapse: collapse; font-family: var(--mono); fon
 .kv td:first-child { width: 38%; color: var(--muted); }
 .kv pre { margin: 0; white-space: pre-wrap; }
 @media (max-width: 800px) {
+  .url { width: 34%; }
   main { flex-direction: column; }
   #detail { border-left: 0; border-top: 1px solid var(--line); flex-basis: 50%; }
   .tool { width: 104px; }
@@ -1197,7 +1201,7 @@ table.kv { width: 100%; border-collapse: collapse; font-family: var(--mono); fon
 <header id="hdr">
   <div class="brand">
     <a href="https://www.measure-apps.com" target="_blank" rel="noopener" aria-label="measure-apps.com"><svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="6" y="2" width="20" height="28" rx="3" stroke="#1a1a1a" stroke-width="2" fill="#ffffff"/><rect x="8" y="6" width="16" height="17" fill="#298F89" fill-opacity="0.2"/><rect x="10" y="16" width="3" height="7" fill="#298F89"/><rect x="14.5" y="12" width="3" height="11" fill="#298F89"/><rect x="19" y="8" width="3" height="15" fill="#1a1a1a"/><circle cx="16" cy="26" r="1.5" fill="#1a1a1a"/></svg></a>
-    <h1>App Tracking Debugger <span class="dot" title="Live"></span><span class="by">by <a href="https://www.measure-apps.com" target="_blank" rel="noopener">measure-apps.com</a></span></h1>
+    <h1>Mobile App Tracking Debugger <span class="dot" title="Live"></span><span class="by">by <a href="https://www.measure-apps.com" target="_blank" rel="noopener">measure-apps.com</a></span></h1>
   </div>
   <input type="search" id="search" placeholder="Search">
   <button id="domainsBtn">sGTM domains</button>
@@ -1210,6 +1214,7 @@ table.kv { width: 100%; border-collapse: collapse; font-family: var(--mono); fon
   <input type="text" id="domainsInput" placeholder="sgtm.example.com, data.example.cz">
   <button id="domainsSave">Save</button>
   <span class="hint">Comma separated. Subdomains match too.</span>
+  <span class="note" id="domainsNote"></span>
 </div>
 <div class="bar" id="chips"></div>
 <main>
@@ -1287,9 +1292,10 @@ function renderList() {
       <td class="t">${fmtTime(h.time)}</td>
       <td class="tool"><span class="badge" style="--c:${t.color}">${esc(t.label)}</span></td>
       <td class="url" title="${esc(h.url)}">${esc(endpoint(h.url))}</td>
-      <td class="st ${bad ? "bad" : ""}">${esc(h.status ?? "")}</td></tr>`);
+      <td class="st ${bad ? "bad" : ""}">${esc(h.status ?? "")}</td>
+      <td class="ev" title="${esc(h.event)}">${esc(h.event)}</td></tr>`);
   }
-  const head = `<thead><tr><th class="t">Time</th><th class="tool">Tool</th><th class="url">URL</th><th class="st">Status</th></tr></thead>`;
+  const head = `<thead><tr><th class="t">Time</th><th class="tool">Tool</th><th class="url">URL</th><th class="st">Status</th><th class="ev">Event name</th></tr></thead>`;
   $("list").innerHTML = rows.length ? `<table class="hits">${head}<tbody>${rows.join("")}</tbody></table>`
     : `<div class="empty">${S.hits.length ? "No hits match the filter." : "No hits yet. Use the app with the proxy enabled."}</div>`;
   $("count").textContent = `${n} hit${n === 1 ? "" : "s"}`;
@@ -1340,9 +1346,17 @@ async function poll() {
       }
       S.mitmweb = d.mitmweb;
       if (JSON.stringify(d.domains) !== JSON.stringify(S.domains)) {
+        const added = S.domainsLoaded ? d.domains.filter(x => !S.domains.includes(x)) : [];
         S.domains = d.domains;
         if (document.activeElement !== $("domainsInput")) $("domainsInput").value = d.domains.join(", ");
+        if (added.length && !S.savingDomains) {
+          // detected automatically (Firebase config) -> show the settings with the new domain
+          $("domains").classList.add("open", "flash");
+          $("domainsNote").textContent = "Detected automatically: " + added.join(", ");
+          setTimeout(() => $("domains").classList.remove("flash"), 2500);
+        }
       }
+      S.domainsLoaded = true;
       if (d.gen !== S.gen) {
         // server list was cleared or reclassified -> reload everything
         const first = S.gen === null && S.after === 0;
@@ -1388,9 +1402,11 @@ $("clear").onclick = async () => { await fetch("/api/clear", { method: "POST" })
 $("domainsBtn").onclick = () => $("domains").classList.toggle("open");
 $("domainsSave").onclick = async () => {
   const list = $("domainsInput").value.split(/[\s,]+/).filter(Boolean);
+  S.savingDomains = true;
   const r = await fetch("/api/domains", { method: "POST", body: JSON.stringify(list) });
   const d = await r.json();
-  S.domains = d.domains; $("domainsInput").value = d.domains.join(", ");
+  S.savingDomains = false;
+  S.domains = d.domains; $("domainsInput").value = d.domains.join(", "); $("domainsNote").textContent = "";
   $("domainsSave").textContent = "Saved";
   setTimeout(() => $("domainsSave").textContent = "Save", 1200);
 };

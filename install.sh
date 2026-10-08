@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Installs the App Tracking Debugger so mitmproxy / mitmweb / mitmdump load it automatically.
+# Installs the Mobile App Tracking Debugger so mitmproxy / mitmweb / mitmdump load it automatically.
 set -euo pipefail
 
 # GitHub repository (used when the script is run via curl | bash)
