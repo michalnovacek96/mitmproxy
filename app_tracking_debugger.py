@@ -1102,7 +1102,6 @@ table.kv { width: 100%; border-collapse: collapse; font-family: var(--mono); fon
 @media (max-width: 800px) {
   main { flex-direction: column; }
   #detail { border-left: 0; border-top: 1px solid var(--line); flex-basis: 50%; }
-  .url { display: none; }
   .tool { width: 104px; }
 }
 </style>
